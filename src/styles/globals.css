@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 0 0% 0%;
+  --foreground: 0 0% 100%;
+}
+
+@layer base {
+  body {
+    @apply bg-navy-950 text-foreground overflow-x-hidden;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  .btn-gold {
+    @apply bg-gold-600 hover:bg-gold-500 text-black font-semibold py-3 px-8 rounded-full transition-all duration-300 shadow-lg shadow-gold-900/20 active:scale-95;
+  }
+  
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl;
+  }
+
+  .nav-link {
+    @apply text-white/70 hover:text-gold-400 transition-colors duration-200 text-sm font-medium;
+  }
+
+  .heading-hero {
+    @apply text-5xl md:text-7xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-white to-white/50;
+  }
+}
+
+/* Watermark styles */
+.unselectable {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+img {
+  pointer-events: none;
+}
