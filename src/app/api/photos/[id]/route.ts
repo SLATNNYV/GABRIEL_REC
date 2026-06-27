@@ -16,19 +16,21 @@ export async function GET(
     const photoId = params.id;
     // In production, check session for individual client dynamic watermark
     // const session = await getServerSession();
-    const clientName = "Visitante"; 
+    const clientName = "Visitante";
 
     // 1. Get original from S3
     const originalBuffer = await fetchFromS3(`photos/${photoId}.jpg`);
-    
+
     // 2. Generate watermarked version
     const watermarked = await generateWatermarkedBuffer(originalBuffer, clientName);
 
     // 3. Return as image
-    return new NextResponse(watermarked, {
+    const body = new Uint8Array(watermarked);
+
+    return new NextResponse(body, {
       headers: {
         "Content-Type": "image/jpeg",
-        "Cache-Control": "private, max-age=300", // Cache for 5 mins
+        "Cache-Control": "private, max-age=300",
       },
     });
   } catch (error) {
