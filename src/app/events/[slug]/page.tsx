@@ -7,20 +7,48 @@ import Link from "next/link";
 export default function GalleryPage({ params }: { params: { slug: string } }) {
   const [selectedPhotos, setSelectedPhotos] = useState<string[]>([]);
   const [eventData, setEventData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock loading for demo
   useEffect(() => {
-    // In a real app, fetch from database using slug
-    setEventData({
-      name: "Casamento João e Maria",
-      date: "15 de Maio de 2026",
-      photos: Array.from({ length: 48 }).map((_, i) => ({
-        id: `photo-${i}`,
-        url: `/mock/photo-${i % 4}.jpg`, // Would be a watermarked URL from API
-        price: 15.00
-      }))
-    });
-  }, [params.slug]);  // Load cart on mount
+    async function loadEvent() {
+      try {
+        setLoading(true);
+        const res = await fetch(`/api/events/${params.slug}`);
+        if (!res.ok) {
+          throw new Error("Galeria não encontrada ou erro no servidor");
+        }
+        const data = await res.json();
+        
+        // Map event and photos to expected structure
+        const formattedEvent = {
+          ...data,
+          name: data.name,
+          date: new Date(data.date).toLocaleDateString("pt-BR", {
+            day: "numeric",
+            month: "long",
+            year: "numeric"
+          }),
+          photos: data.photos.map((p: any) => ({
+            id: p.id,
+            url: p.s3Key || `/mock/photo-0.jpg`,
+            price: p.price
+          }))
+        };
+        
+        setEventData(formattedEvent);
+      } catch (err: any) {
+        console.error("Erro ao carregar evento:", err);
+        setError(err.message || "Erro ao carregar a galeria.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    loadEvent();
+  }, [params.slug]);
+
+  // Load cart on mount
   useEffect(() => {
     if (eventData) {
       const stored = localStorage.getItem("cartItems");
@@ -28,6 +56,8 @@ export default function GalleryPage({ params }: { params: { slug: string } }) {
         try {
           const items = JSON.parse(stored);
           const ids = items.map((i: any) => i.id);
+          // Keep only items that belong to current event for checkout if desired
+          // or just load all selected items.
           setSelectedPhotos(ids);
         } catch (e) {
           console.error(e);
@@ -58,7 +88,12 @@ export default function GalleryPage({ params }: { params: { slug: string } }) {
     localStorage.removeItem("cartItems");
   };
 
-  if (!eventData) return <div className="pt-40 text-center">Carregando galeria...</div>;
+  if (loading) return <div className="pt-40 text-center text-white">Carregando galeria...</div>;
+  if (error || !eventData) return <div className="pt-40 text-center text-red-500">Erro: {error || "Galeria não encontrada"}</div>;
+
+  const totalPhotosPrice = eventData.photos.reduce((acc: number, p: any) => acc + p.price, 0);
+  // Calculate package price with a 30% discount
+  const packagePrice = totalPhotosPrice * 0.7;
 
   return (
     <div className="pt-28 min-h-screen bg-black">
@@ -79,25 +114,33 @@ export default function GalleryPage({ params }: { params: { slug: string } }) {
              <div className="flex items-center gap-2 text-[10px] text-white/30 bg-white/5 px-3 py-1.5 rounded-full border border-white/10 unselectable">
                 <Shield className="w-3 h-3" /> Proteção Ativa
              </div>
-             <button onClick={buyAllPhotos} className="btn-gold !py-2 !px-6 text-sm flex items-center gap-2">
-                <ShoppingCart className="w-4 h-4" /> Comprar Pacote (R$ 199,00)
-             </button>
+             {eventData.photos.length > 0 && (
+               <button onClick={buyAllPhotos} className="btn-gold !py-2 !px-6 text-sm flex items-center gap-2">
+                  <ShoppingCart className="w-4 h-4" /> Comprar Pacote (R$ {packagePrice.toFixed(2)})
+               </button>
+             )}
           </div>
         </div>
       </div>
 
       {/* Grid de Fotos */}
       <div className="container mx-auto px-4 sm:px-6 mb-32">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-          {eventData.photos.map((photo: any) => (
-            <PhotoThumb 
-               key={photo.id} 
-               photo={photo} 
-               isSelected={selectedPhotos.includes(photo.id)}
-               onToggle={() => toggleSelection(photo.id)}
-            />
-          ))}
-        </div>
+        {eventData.photos.length === 0 ? (
+          <div className="text-center py-20 text-white/40">
+            Nenhuma foto disponível neste evento ainda.
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+            {eventData.photos.map((photo: any) => (
+              <PhotoThumb 
+                 key={photo.id} 
+                 photo={photo} 
+                 isSelected={selectedPhotos.includes(photo.id)}
+                 onToggle={() => toggleSelection(photo.id)}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Barra de Seleção Flutuante */}
@@ -110,7 +153,9 @@ export default function GalleryPage({ params }: { params: { slug: string } }) {
                 </div>
                 <div>
                    <p className="text-sm font-bold text-white">Fotos Selecionadas</p>
-                   <p className="text-xs text-white/50">Total estimado: R$ {(selectedPhotos.length * 15).toFixed(2)}</p>
+                   <p className="text-xs text-white/50">
+                     Total estimado: R$ {eventData.photos.filter((p: any) => selectedPhotos.includes(p.id)).reduce((acc: number, p: any) => acc + p.price, 0).toFixed(2)}
+                   </p>
                 </div>
              </div>
              <div className="flex items-center gap-3">
@@ -138,6 +183,16 @@ function PhotoThumb({ photo, isSelected, onToggle }: { photo: any; isSelected: b
         <Camera className="w-8 h-8 text-white/5" />
       </div>
 
+      {/* Exibição da Imagem com segurança */}
+      <img 
+        src={photo.url} 
+        alt="Preview" 
+        className="w-full h-full object-cover relative z-0 transition-transform duration-500 group-hover:scale-105"
+        onError={(e) => {
+          e.currentTarget.style.display = "none";
+        }}
+      />
+
       {/* Overlay de Marca d'Água Dinâmica (Visual) */}
       <div className="absolute inset-0 z-10 pointer-events-none unselectable flex items-center justify-center">
          <div className="rotate-[-30deg] opacity-[0.08] text-white space-y-4">
@@ -155,7 +210,7 @@ function PhotoThumb({ photo, isSelected, onToggle }: { photo: any; isSelected: b
          <button className={`p-2 rounded-full backdrop-blur-md transition-all ${isSelected ? "bg-gold-500 text-black" : "bg-black/40 text-white hover:bg-gold-600 hover:text-black"}`}>
             {isSelected ? <ShoppingCart className="w-4 h-4 fill-current" /> : <PlusIcon className="w-4 h-4" />}
          </button>
-         <button className="p-2 rounded-full bg-black/40 text-white hover:bg-red-500 transition-all backdrop-blur-md">
+         <button className="p-2 rounded-full bg-black/40 text-white hover:bg-red-500 transition-all backdrop-blur-md" onClick={(e) => e.stopPropagation()}>
             <Heart className="w-4 h-4" />
          </button>
       </div>

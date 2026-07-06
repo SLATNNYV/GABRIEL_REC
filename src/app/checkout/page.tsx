@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CreditCard, ArrowLeft, Shield, Check, Trash2, Smartphone } from "lucide-react";
+import { ArrowLeft, Shield, Check, Trash2, MessageSquare, Send } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export default function CheckoutPage() {
   const [cartItems, setCartItems] = useState<any[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState<"pix" | "card">("pix");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [coupon, setCoupon] = useState("");
@@ -15,11 +14,6 @@ export default function CheckoutPage() {
   const [couponApplied, setCouponApplied] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   
-  // Card states
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCvv, setCardCvv] = useState("");
-
   const router = useRouter();
 
   useEffect(() => {
@@ -55,25 +49,50 @@ export default function CheckoutPage() {
   const discountAmount = subtotal * discount;
   const total = subtotal - discountAmount;
 
-  const handlePaymentSubmit = (e: React.FormEvent) => {
+  const handleCheckoutSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (cartItems.length === 0) return;
     if (!email || !name) {
-      alert("Por favor, preencha os dados do cliente.");
+      alert("Por favor, preencha seus dados de identificação.");
       return;
     }
 
     setIsProcessing(true);
 
+    const whatsappNumber = "5544998348208";
+
+    // Build the photo list formatted for WhatsApp text
+    const itemsList = cartItems.map((item, idx) => {
+      return `   - Foto ID: ${item.id} (${item.price ? `R$ ${item.price.toFixed(2)}` : "Sob consulta"})`;
+    }).join("\n");
+
+    const message = `Olá Gabriel Rec! Gostaria de finalizar meu pedido de fotos.
+
+*DADOS DO CLIENTE:*
+- Nome: ${name}
+- E-mail: ${email}
+
+*FOTOS ADQUIRIDAS:*
+${itemsList}
+
+*RESUMO DO PEDIDO:*
+- Quantidade: ${cartItems.length} foto(s)
+- Desconto: R$ ${discountAmount.toFixed(2)}
+- Valor Total: *R$ ${total.toFixed(2)}*
+
+Por favor, me envie os dados para pagamento Pix e liberação do link de download em alta resolução.`;
+
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
+
+    // Store purchased items list and clear cart
+    localStorage.setItem("purchasedItems", JSON.stringify(cartItems));
+    localStorage.removeItem("cartItems");
+
     setTimeout(() => {
       setIsProcessing(false);
-      // Store purchased items to localStorage
-      localStorage.setItem("purchasedItems", JSON.stringify(cartItems));
-      // Clear cart
-      localStorage.removeItem("cartItems");
-      // Redirect
-      router.push("/checkout/success");
-    }, 2500);
+      window.location.href = whatsappUrl;
+    }, 1500);
   };
 
   return (
@@ -92,7 +111,7 @@ export default function CheckoutPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left Panel: Customer and Payment details */}
+            {/* Left Panel: Identification and Info */}
             <div className="lg:col-span-2 space-y-8">
               {/* Customer Info */}
               <div className="glass-card p-8">
@@ -126,102 +145,45 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* Payment Methods */}
-              <div className="glass-card p-8">
-                <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+              {/* Payment info via WhatsApp */}
+              <div className="glass-card p-8 border-gold-500/20 bg-gradient-to-b from-zinc-950 to-black">
+                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                   <span className="w-6 h-6 bg-gold-600/10 text-gold-500 rounded-full flex items-center justify-center text-xs font-black">2</span>
-                  Forma de Pagamento
+                  Pagamento e Liberação
                 </h3>
 
-                <div className="grid grid-cols-2 gap-4 mb-8">
-                  <button 
-                    onClick={() => setPaymentMethod("pix")}
-                    className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${paymentMethod === "pix" ? "border-gold-500 bg-gold-600/5" : "border-white/5 bg-white/5 hover:border-white/20"}`}
-                  >
-                    <Smartphone className="w-6 h-6 text-gold-500" />
-                    <span className="text-sm font-semibold">PIX (Aprovação Instantânea)</span>
-                  </button>
-                  <button 
-                    onClick={() => setPaymentMethod("card")}
-                    className={`p-4 rounded-xl border-2 flex flex-col items-center gap-3 transition-all ${paymentMethod === "card" ? "border-gold-500 bg-gold-600/5" : "border-white/5 bg-white/5 hover:border-white/20"}`}
-                  >
-                    <CreditCard className="w-6 h-6 text-gold-500" />
-                    <span className="text-sm font-semibold">Cartão de Crédito</span>
-                  </button>
+                <div className="space-y-6">
+                  <div className="flex gap-4 items-start bg-gold-600/5 border border-gold-500/20 p-5 rounded-xl">
+                    <MessageSquare className="w-6 h-6 text-gold-500 shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-sm font-bold text-white mb-1">Como funciona o pagamento?</h4>
+                      <p className="text-xs text-white/60 leading-relaxed">
+                        Ao clicar no botão de finalizar, seu pedido será compilado e você será redirecionado para o WhatsApp do fotógrafo *Gabriel Rec* com a mensagem pronta.
+                      </p>
+                      <ul className="text-xs text-white/50 list-disc pl-4 mt-2 space-y-1">
+                        <li>Você efetua o pagamento de forma simples via Pix direto no WhatsApp.</li>
+                        <li>Após a confirmação, o fotógrafo envia o link para download das fotos em alta resolução sem marcas d'água.</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleCheckoutSubmit}>
+                    <button 
+                      type="submit" 
+                      disabled={isProcessing}
+                      className="w-full btn-gold !py-4 text-md font-bold flex items-center justify-center gap-3 disabled:opacity-50"
+                    >
+                      {isProcessing ? (
+                        "Redirecionando..."
+                      ) : (
+                        <>
+                          <Send className="w-5 h-5" />
+                          Finalizar e Enviar via WhatsApp (R$ {total.toFixed(2)})
+                        </>
+                      )}
+                    </button>
+                  </form>
                 </div>
-
-                <form onSubmit={handlePaymentSubmit}>
-                  {paymentMethod === "pix" ? (
-                    <div className="text-center py-6 border border-white/5 rounded-2xl bg-zinc-950/40 p-6 space-y-6">
-                      <div className="w-40 h-40 bg-white p-2 rounded-xl mx-auto flex items-center justify-center">
-                        {/* Mock QR Code representation */}
-                        <div className="w-full h-full bg-[radial-gradient(circle_at_center,black_50%,transparent_52%)] bg-[size:10px_10px] opacity-80"></div>
-                      </div>
-                      
-                      <div className="max-w-md mx-auto">
-                        <p className="text-xs text-white/50 mb-3">Escaneie o código Pix acima ou copie a chave abaixo:</p>
-                        <div className="flex bg-white/5 border border-white/10 rounded-xl p-2 pl-4 items-center justify-between">
-                          <span className="text-xs font-mono text-white/70 overflow-hidden text-ellipsis whitespace-nowrap mr-4">
-                            00020126580014br.gov.bcb.pix0136gabrielrec.photo-payment-id-1234
-                          </span>
-                          <button 
-                            type="button" 
-                            onClick={() => alert("Código Pix copiado!")} 
-                            className="bg-gold-600 text-black text-xs font-bold py-2 px-4 rounded-lg hover:bg-gold-500 transition-colors"
-                          >
-                            Copiar
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      <div>
-                        <label className="block text-xs font-semibold text-white/40 uppercase tracking-wider mb-2">Número do Cartão</label>
-                        <input 
-                          type="text" 
-                          required
-                          value={cardNumber}
-                          onChange={(e) => setCardNumber(e.target.value)}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 focus:outline-none focus:border-gold-500/50 transition-colors text-white"
-                          placeholder="0000 0000 0000 0000"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-6">
-                        <div>
-                          <label className="block text-xs font-semibold text-white/40 uppercase tracking-wider mb-2">Vencimento (MM/AA)</label>
-                          <input 
-                            type="text" 
-                            required
-                            value={cardExpiry}
-                            onChange={(e) => setCardExpiry(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 focus:outline-none focus:border-gold-500/50 transition-colors text-white"
-                            placeholder="MM/AA"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-semibold text-white/40 uppercase tracking-wider mb-2">Código CVV</label>
-                          <input 
-                            type="text" 
-                            required
-                            value={cardCvv}
-                            onChange={(e) => setCardCvv(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 focus:outline-none focus:border-gold-500/50 transition-colors text-white"
-                            placeholder="123"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <button 
-                    type="submit" 
-                    disabled={isProcessing}
-                    className="w-full btn-gold !py-4 text-md font-bold mt-8 flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    {isProcessing ? "Processando Pagamento..." : `Confirmar e Pagar R$ ${total.toFixed(2)}`}
-                  </button>
-                </form>
               </div>
             </div>
 
@@ -235,15 +197,15 @@ export default function CheckoutPage() {
                   {cartItems.map((item) => (
                     <div key={item.id} className="flex gap-4 items-center justify-between py-2 border-b border-white/5 last:border-0">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-lg bg-zinc-900 overflow-hidden relative border border-white/10">
+                        <div className="w-12 h-12 rounded-lg bg-zinc-900 overflow-hidden relative border border-white/10 shrink-0">
                           <img src={item.url} alt="Foto preview" className="w-full h-full object-cover" />
                         </div>
-                        <div>
-                          <p className="text-xs font-bold text-white/80">Foto</p>
-                          <p className="text-[10px] text-white/40">ID: {item.id}</p>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-white/80 truncate">Foto</p>
+                          <p className="text-[10px] text-white/45 truncate">ID: {item.id}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 shrink-0">
                         <span className="text-sm font-bold text-gold-500">R$ {item.price.toFixed(2)}</span>
                         <button onClick={() => removeItem(item.id)} className="p-1.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-lg transition-all">
                           <Trash2 className="w-3.5 h-3.5" />
@@ -253,7 +215,7 @@ export default function CheckoutPage() {
                   ))}
                 </div>
 
-                {/* Cupom */}
+                {/* Coupon */}
                 <div className="mb-6">
                   <label className="block text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-2">Cupom de Desconto</label>
                   <div className="flex gap-2">
@@ -299,9 +261,9 @@ export default function CheckoutPage() {
               <div className="glass-card p-6 border-white/5 flex gap-4 items-start bg-zinc-950/20">
                 <Shield className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-xs font-bold text-white mb-1">Compra 100% Segura</h4>
+                  <h4 className="text-xs font-bold text-white mb-1">Contato Direto e Seguro</h4>
                   <p className="text-[10px] text-white/40 leading-relaxed">
-                    Suas fotos serão enviadas automaticamente e as marcas d'água serão retiradas após o processamento.
+                    Você falará diretamente com o fotógrafo autorizado. Suas fotos originais de alta resolução serão enviadas com segurança.
                   </p>
                 </div>
               </div>
