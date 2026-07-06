@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
-import { Outfit } from "next/font/google";
 import "../styles/globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-
-const outfit = Outfit({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Gabriel Rec | Fotografia de Eventos",
@@ -21,7 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className="dark">
-      <body className={outfit.className}>
+      <body>
         <div className="flex flex-col min-h-screen">
           <Navbar />
           <main className="flex-grow">{children}</main>

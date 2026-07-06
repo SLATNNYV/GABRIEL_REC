@@ -71,10 +71,6 @@ function EventCard({ event }: { event: any }) {
             src={event.coverImage || "/mock/wedding.jpg"} 
             alt={event.name} 
             className="w-full h-full object-cover"
-            onError={(e) => {
-              // Fallback if image fails to load
-              e.currentTarget.src = "/mock/wedding.jpg";
-            }}
           />
         </div>
         
