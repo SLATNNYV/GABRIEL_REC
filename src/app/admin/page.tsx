@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { LayoutDashboard, Image as ImageIcon, Users, DollarSign, Plus, Settings } from "lucide-react";
 import Link from "next/link";
 import { prisma } from "@/lib/db";

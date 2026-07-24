@@ -42,7 +42,7 @@ export async function PUT(
   try {
     const { id } = params;
     const body = await req.json();
-    const { name, slug, date, category, coverImage, isPrivate, password } = body;
+    const { name, slug, date, category, coverImage, isPrivate, password, bulkPhotoPrice } = body;
 
     const event = await prisma.event.update({
       where: { id },
@@ -56,6 +56,13 @@ export async function PUT(
         password: password !== undefined ? (password || null) : undefined,
       }
     });
+
+    if (bulkPhotoPrice !== undefined && bulkPhotoPrice !== null) {
+      await prisma.photo.updateMany({
+        where: { eventId: id },
+        data: { price: parseFloat(bulkPhotoPrice) }
+      });
+    }
 
     return NextResponse.json(event);
   } catch (error) {

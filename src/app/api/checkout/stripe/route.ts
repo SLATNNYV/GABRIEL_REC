@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
+import { prisma } from "@/lib/db";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2023-10-16" as any,
@@ -7,10 +8,38 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(req: NextRequest) {
   try {
-    const { items, email } = await req.json();
+    const { items, email, coupon } = await req.json();
 
-    // 1. Calculate total server-side
-    // const total = items.length * 15.00;
+    // 1. Calculate discount rate
+    let discount = 0;
+    if (coupon) {
+      const couponUpper = coupon.toUpperCase().trim();
+      
+      // Try to find the coupon in the database
+      const dbCoupon = await prisma.coupon.findUnique({
+        where: { code: couponUpper },
+      });
+
+      if (dbCoupon) {
+        const now = new Date();
+        const isNotExpired = !dbCoupon.expiresAt || dbCoupon.expiresAt > now;
+        const isUnderLimit = !dbCoupon.usageLimit || dbCoupon.usedCount < dbCoupon.usageLimit;
+
+        if (isNotExpired && isUnderLimit) {
+          discount = dbCoupon.discount;
+          
+          // Increment used count
+          await prisma.coupon.update({
+            where: { id: dbCoupon.id },
+            data: { usedCount: { increment: 1 } },
+          });
+        }
+      } else if (couponUpper === "GABRIEL10") {
+        discount = 0.10;
+      } else if (couponUpper === "VISIONARY") {
+        discount = 0.20;
+      }
+    }
 
     // 2. Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
@@ -20,17 +49,20 @@ export async function POST(req: NextRequest) {
           expires_after_seconds: 3600, // Expires in 1 hour
         },
       },
-      line_items: items.map((item: any) => ({
-        price_data: {
-          currency: "brl",
-          product_data: {
-            name: `Foto de Evento - ID ${item.id}`,
-            images: [item.url], // watermarked thumbnail
+      line_items: items.map((item: any) => {
+        const discountedPrice = item.price * (1 - discount);
+        return {
+          price_data: {
+            currency: "brl",
+            product_data: {
+              name: `Foto de Evento - ID ${item.id}`,
+              images: [item.url], // watermarked thumbnail
+            },
+            unit_amount: Math.round(discountedPrice * 100), // Dynamic discounted price in cents
           },
-          unit_amount: Math.round(item.price * 100), // Dynamic price in cents
-        },
-        quantity: 1,
-      })),
+          quantity: 1,
+        };
+      }),
       mode: "payment",
       success_url: `${process.env.NEXT_PUBLIC_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_URL}/checkout`,

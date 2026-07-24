@@ -245,13 +245,15 @@ export default function EditEventPage({ params }: { params: { id: string } }) {
 
     setUpdatingBulk(true);
     try {
-      // Loop over all photos and update
-      for (const p of photos) {
-        await fetch(`/api/photos/${p.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ price: priceVal })
-        });
+      // Send a single bulk update request to the event endpoint
+      const res = await fetch(`/api/events/${params.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bulkPhotoPrice: priceVal })
+      });
+
+      if (!res.ok) {
+        throw new Error("Erro no servidor ao aplicar preços em lote.");
       }
 
       // Update local state

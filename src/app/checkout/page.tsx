@@ -65,6 +65,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           items: cartItems,
           email: email,
+          coupon: couponApplied ? coupon : undefined,
         }),
       });
 
