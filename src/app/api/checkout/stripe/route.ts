@@ -41,6 +41,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const baseUrl = process.env.NEXT_PUBLIC_URL || "https://gabriel-rec.vercel.app";
+
     // 2. Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card", "pix"],
@@ -51,12 +53,13 @@ export async function POST(req: NextRequest) {
       },
       line_items: items.map((item: any) => {
         const discountedPrice = item.price * (1 - discount);
+        const imageUrl = item.url.startsWith("http") ? item.url : `${baseUrl}${item.url}`;
         return {
           price_data: {
             currency: "brl",
             product_data: {
               name: `Foto de Evento - ID ${item.id}`,
-              images: [item.url], // watermarked thumbnail
+              images: [imageUrl], // Absolute URL required by Stripe
             },
             unit_amount: Math.round(discountedPrice * 100), // Dynamic discounted price in cents
           },
