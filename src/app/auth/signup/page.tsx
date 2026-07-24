@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Camera, Mail, Lock, ArrowRight, User } from "lucide-react";
+import { Camera, Mail, Lock, ArrowRight, User, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -10,19 +10,39 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !name) return;
+    if (!email || !name || !password) return;
 
     setIsLoading(true);
+    setError("");
 
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Erro ao registrar usuário.");
+      }
+
+      alert("Conta criada com sucesso! Redirecionando para o login...");
+      router.push("/auth/login");
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Erro ao conectar com o servidor.");
+    } finally {
       setIsLoading(false);
-      // Simulating sign up and login
-      router.push("/client/dashboard");
-    }, 1000);
+    }
   };
 
   return (
@@ -40,6 +60,13 @@ export default function SignupPage() {
             <h1 className="text-2xl font-bold">Crie sua conta</h1>
             <p className="text-white/40 text-sm mt-2">Acesse e gerencie suas compras de fotos de eventos.</p>
           </div>
+
+          {error && (
+            <div className="flex gap-2 items-center bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-xs mb-6">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>

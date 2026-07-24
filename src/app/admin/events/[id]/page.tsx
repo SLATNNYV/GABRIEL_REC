@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, Plus, Trash2, Edit, Save, Camera, Sparkles, AlertCircle, Link as LinkIcon } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Edit, Save, Camera, Sparkles, AlertCircle, Link as LinkIcon, Upload, Loader2 } from "lucide-react";
 import Link from "next/link";
 
 export default function EditEventPage({ params }: { params: { id: string } }) {
@@ -10,9 +10,11 @@ export default function EditEventPage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(true);
 
   // Add photo state
-  const [newPhotoUrl, setNewPhotoUrl] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<string>("");
   const [newPhotoPrice, setNewPhotoPrice] = useState("15.00");
   const [addingPhoto, setAddingPhoto] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
 
   // Bulk pricing state
   const [bulkPrice, setBulkPrice] = useState("");
@@ -92,38 +94,103 @@ export default function EditEventPage({ params }: { params: { id: string } }) {
     }
   };
 
-  const handleAddPhoto = async (e: React.FormEvent) => {
+  const handleBulkUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPhotoUrl) {
-      alert("Informe a URL da foto.");
+    if (!selectedFiles || selectedFiles.length === 0) {
+      alert("Selecione pelo menos uma foto para enviar.");
       return;
     }
 
     setAddingPhoto(true);
+    const totalFiles = selectedFiles.length;
+
     try {
-      const res = await fetch("/api/photos", {
+      const newPhotosList: any[] = [];
+      const priceVal = parseFloat(newPhotoPrice) || 0;
+
+      for (let i = 0; i < totalFiles; i++) {
+        const file = selectedFiles[i];
+        setUploadProgress(`Enviando foto ${i + 1} de ${totalFiles}: ${file.name}...`);
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const uploadRes = await fetch("/api/photos/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!uploadRes.ok) {
+          console.error(`Erro ao fazer upload do arquivo ${file.name}`);
+          continue;
+        }
+
+        const uploadData = await uploadRes.json();
+        const fileUrl = uploadData.url;
+
+        const dbRes = await fetch("/api/photos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            eventId: params.id,
+            s3Key: fileUrl,
+            price: priceVal,
+          }),
+        });
+
+        if (dbRes.ok) {
+          const newPhoto = await dbRes.json();
+          newPhotosList.push(newPhoto);
+        } else {
+          console.error(`Erro ao registrar foto ${file.name} no banco.`);
+        }
+      }
+
+      if (newPhotosList.length > 0) {
+        setPhotos(prev => [...prev, ...newPhotosList]);
+        alert(`${newPhotosList.length} de ${totalFiles} foto(s) adicionada(s) com sucesso!`);
+      } else {
+        alert("Nenhuma foto pôde ser adicionada.");
+      }
+
+      setSelectedFiles(null);
+      setUploadProgress("");
+      const fileInput = document.getElementById("photo-file-input") as HTMLInputElement;
+      if (fileInput) fileInput.value = "";
+    } catch (error) {
+      console.error(error);
+      alert("Erro durante o upload em lote.");
+    } finally {
+      setAddingPhoto(false);
+    }
+  };
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingCover(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", files[0]);
+
+      const res = await fetch("/api/photos/upload", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          eventId: params.id,
-          s3Key: newPhotoUrl,
-          price: parseFloat(newPhotoPrice) || 0
-        })
+        body: formData,
       });
 
       if (res.ok) {
-        const newPhoto = await res.json();
-        setPhotos(prev => [...prev, newPhoto]);
-        setNewPhotoUrl("");
-        alert("Foto adicionada com sucesso!");
+        const data = await res.json();
+        setCoverImage(data.url);
+        alert("Imagem de capa enviada com sucesso!");
       } else {
-        alert("Erro ao adicionar foto.");
+        alert("Erro ao enviar imagem de capa.");
       }
-    } catch (error) {
-      console.error(error);
-      alert("Erro de conexão.");
+    } catch (err) {
+      console.error(err);
+      alert("Erro de conexão no upload da capa.");
     } finally {
-      setAddingPhoto(false);
+      setUploadingCover(false);
     }
   };
 
@@ -276,14 +343,34 @@ export default function EditEventPage({ params }: { params: { id: string } }) {
                   <option value="Ensaio">Ensaio</option>
                 </select>
               </div>
-              <div className="md:col-span-2">
-                <label className="block text-[10px] text-white/40 uppercase font-semibold mb-1">URL Imagem de Capa</label>
-                <input
-                  type="text"
-                  value={coverImage}
-                  onChange={(e) => setCoverImage(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 focus:outline-none focus:border-gold-500/50 transition-colors text-sm text-white"
-                />
+              <div className="md:col-span-2 space-y-2">
+                <label className="block text-[10px] text-white/40 uppercase font-semibold mb-1">Imagem de Capa</label>
+                <div className="flex gap-4 items-center">
+                  <input
+                    type="text"
+                    value={coverImage}
+                    onChange={(e) => setCoverImage(e.target.value)}
+                    placeholder="URL ou caminho da imagem de capa"
+                    className="flex-grow bg-white/5 border border-white/10 rounded-lg py-2 px-3 focus:outline-none focus:border-gold-500/50 transition-colors text-sm text-white"
+                  />
+                  <div className="relative">
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleCoverUpload}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      disabled={uploadingCover}
+                    />
+                    <button
+                      type="button"
+                      disabled={uploadingCover}
+                      className="bg-white/10 hover:bg-white/20 border border-white/10 text-white text-xs font-bold py-2.5 px-4 rounded-lg flex items-center gap-1.5 transition-all"
+                    >
+                      {uploadingCover ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                      Escolher do PC
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -303,31 +390,34 @@ export default function EditEventPage({ params }: { params: { id: string } }) {
 
       {/* Photos addition section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-        {/* Add photo form */}
+        {/* Add photo form (from PC) */}
         <div className="glass-card p-6 border-white/5">
           <h3 className="text-md font-bold mb-4 flex items-center gap-2">
-            <Plus className="w-4 h-4 text-gold-500" />
-            Adicionar Nova Foto
+            <Upload className="w-4 h-4 text-gold-500" />
+            Adicionar Fotos (do PC)
           </h3>
 
-          <form onSubmit={handleAddPhoto} className="space-y-4">
+          <form onSubmit={handleBulkUpload} className="space-y-4">
             <div>
-              <label className="block text-[10px] text-white/40 uppercase font-semibold mb-1 flex items-center gap-1">
-                <LinkIcon className="w-3.5 h-3.5" /> Caminho/URL da Imagem
-              </label>
+              <label className="block text-[10px] text-white/40 uppercase font-semibold mb-2">Selecionar Imagens do Computador</label>
               <input
-                type="text"
+                id="photo-file-input"
+                type="file"
+                multiple
+                accept="image/*"
                 required
-                value={newPhotoUrl}
-                onChange={(e) => setNewPhotoUrl(e.target.value)}
-                placeholder="Ex: /mock/photo-0.jpg ou link da imagem"
-                className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-3 focus:outline-none focus:border-gold-500/50 transition-colors text-xs text-white"
+                onChange={(e) => setSelectedFiles(e.target.files)}
+                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-3 text-xs focus:outline-none text-white file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-gold-600 file:text-black file:cursor-pointer hover:file:bg-gold-500"
               />
-              <p className="text-[9px] text-white/30 mt-1">Dica: Você pode usar imagens locais do projeto como `/mock/photo-0.jpg`, `/mock/photo-1.jpg`, etc.</p>
+              {selectedFiles && (
+                <p className="text-[10px] text-gold-500 font-semibold mt-2">
+                  {selectedFiles.length} foto(s) selecionada(s)
+                </p>
+              )}
             </div>
 
             <div>
-              <label className="block text-[10px] text-white/40 uppercase font-semibold mb-1">Preço Inicial (R$)</label>
+              <label className="block text-[10px] text-white/40 uppercase font-semibold mb-1">Preço Individual das Fotos (R$)</label>
               <input
                 type="number"
                 step="0.01"
@@ -339,13 +429,20 @@ export default function EditEventPage({ params }: { params: { id: string } }) {
               />
             </div>
 
+            {uploadProgress && (
+              <div className="p-3 bg-gold-600/10 border border-gold-500/20 text-gold-500 text-[10px] rounded-xl flex items-center gap-2">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>{uploadProgress}</span>
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={addingPhoto}
+              disabled={addingPhoto || !selectedFiles}
               className="w-full btn-gold !py-2.5 text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              <Plus className="w-3.5 h-3.5" />
-              {addingPhoto ? "Adicionando..." : "Adicionar Foto à Galeria"}
+              <Upload className="w-3.5 h-3.5" />
+              {addingPhoto ? "Enviando..." : "Iniciar Upload de Fotos"}
             </button>
           </form>
         </div>

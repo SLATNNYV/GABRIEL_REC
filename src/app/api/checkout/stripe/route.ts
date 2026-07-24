@@ -14,7 +14,12 @@ export async function POST(req: NextRequest) {
 
     // 2. Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"], // For Brazil, also add 'oxxo' or similar if needed, or use Mercado Pago for PIX
+      payment_method_types: ["card", "pix"],
+      payment_method_options: {
+        pix: {
+          expires_after_seconds: 3600, // Expires in 1 hour
+        },
+      },
       line_items: items.map((item: any) => ({
         price_data: {
           currency: "brl",

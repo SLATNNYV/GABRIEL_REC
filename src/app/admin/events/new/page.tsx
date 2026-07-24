@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Save, Calendar, Tag, Link as LinkIcon, Lock } from "lucide-react";
+import { ArrowLeft, Save, Calendar, Tag, Link as LinkIcon, Lock, Upload, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -14,8 +14,38 @@ export default function NewEventPage() {
   const [isPrivate, setIsPrivate] = useState(false);
   const [password, setPassword] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
 
   const router = useRouter();
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingCover(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", files[0]);
+
+      const res = await fetch("/api/photos/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setCoverImage(data.url);
+        alert("Imagem de capa enviada com sucesso!");
+      } else {
+        alert("Erro ao enviar imagem de capa.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Erro de conexão no upload da capa.");
+    } finally {
+      setUploadingCover(false);
+    }
+  };
 
   // Auto-generate slug from name
   const handleNameChange = (val: string) => {
@@ -148,16 +178,43 @@ export default function NewEventPage() {
             </div>
 
             {/* Imagem de Capa */}
-            <div>
-              <label className="block text-xs font-semibold text-white/40 uppercase tracking-wider mb-2">URL da Imagem de Capa</label>
-              <input 
-                type="text" 
-                value={coverImage}
-                onChange={(e) => setCoverImage(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 focus:outline-none focus:border-gold-500/50 transition-colors text-white"
-                placeholder="Ex: /mock/wedding.jpg ou URL externa"
-              />
-              <p className="text-[10px] text-white/30 mt-1.5">Deixe em branco para usar uma imagem padrão de casamento.</p>
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-white/40 uppercase tracking-wider mb-1">Imagem de Capa</label>
+              <div className="flex gap-4 items-center">
+                <input 
+                  type="text" 
+                  value={coverImage}
+                  onChange={(e) => setCoverImage(e.target.value)}
+                  className="flex-grow bg-white/5 border border-white/10 rounded-xl py-3 px-4 focus:outline-none focus:border-gold-500/50 transition-colors text-white"
+                  placeholder="Ex: /mock/wedding.jpg ou faça upload"
+                />
+                <div className="relative">
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={handleCoverUpload}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    disabled={uploadingCover}
+                  />
+                  <button
+                    type="button"
+                    disabled={uploadingCover}
+                    className="bg-white/10 hover:bg-white/20 border border-white/10 text-white text-xs font-bold py-3.5 px-4 rounded-xl flex items-center gap-1.5 transition-all shrink-0"
+                  >
+                    {uploadingCover ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                    Escolher do PC
+                  </button>
+                </div>
+              </div>
+              
+              {coverImage && (
+                <div className="mt-4 p-2 bg-white/5 border border-white/10 rounded-xl max-w-[200px] overflow-hidden">
+                  <p className="text-[9px] text-white/30 mb-2">Prévia da Capa:</p>
+                  <img src={coverImage} alt="Preview Capa" className="w-full h-32 object-cover rounded-lg" />
+                </div>
+              )}
+              
+              <p className="text-[10px] text-white/30 mt-1.5">Faça o upload do seu computador ou digite uma URL. Deixe em branco para usar uma capa padrão.</p>
             </div>
 
             {/* Evento Privado */}
