@@ -1,12 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateWatermarkedBuffer } from "@/lib/watermark";
 import { prisma } from "@/lib/db";
+import fs from "fs";
+import path from "path";
 
-// Mock for S3 fetch
+// robust implementation to fetch files locally or from remote URLs
 async function fetchFromS3(key: string): Promise<Buffer> {
-  // In a real app, use @aws-sdk/client-s3 to get object
-  console.log(`Buscando ${key} do S3...`);
-  return Buffer.from([]); // Semi-empty for code structure
+  // If it's a full remote URL (e.g. S3/R2 public URL), fetch it via http
+  if (key.startsWith("http://") || key.startsWith("https://")) {
+    console.log(`Buscando arquivo remoto: ${key}`);
+    const res = await fetch(key);
+    if (!res.ok) {
+      throw new Error(`Erro ao baixar imagem da URL: ${key}`);
+    }
+    const arrayBuffer = await res.arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  }
+
+  // Otherwise, treat it as a local filepath relative to 'public'
+  console.log(`Buscando arquivo local: ${key}`);
+  let localPath = key;
+  if (key.startsWith("/")) {
+    localPath = path.join(process.cwd(), "public", key);
+  } else {
+    localPath = path.join(process.cwd(), "public", "mock", key); // fallback mock folder
+  }
+
+  if (fs.existsSync(localPath)) {
+    return fs.readFileSync(localPath);
+  }
+
+  // Fallback to a default mock image if file is not found to prevent crashes
+  const fallbackPath = path.join(process.cwd(), "public", "mock", "photo-0.jpg");
+  if (fs.existsSync(fallbackPath)) {
+    console.log(`Arquivo local não encontrado. Utilizando fallback: ${fallbackPath}`);
+    return fs.readFileSync(fallbackPath);
+  }
+
+  throw new Error(`Arquivo não encontrado e fallback indisponível: ${key}`);
 }
 
 export async function GET(
@@ -15,12 +46,20 @@ export async function GET(
 ) {
   try {
     const photoId = params.id;
-    // In production, check session for individual client dynamic watermark
-    // const session = await getServerSession();
+    
+    // Find photo in DB
+    const photo = await prisma.photo.findUnique({
+      where: { id: photoId }
+    });
+
+    if (!photo) {
+      return NextResponse.json({ error: "Foto não encontrada" }, { status: 404 });
+    }
+
     const clientName = "Visitante";
 
-    // 1. Get original from S3
-    const originalBuffer = await fetchFromS3(`photos/${photoId}.jpg`);
+    // 1. Get original from S3 / local path
+    const originalBuffer = await fetchFromS3(photo.s3Key);
 
     // 2. Generate watermarked version
     const watermarked = await generateWatermarkedBuffer(originalBuffer, clientName);

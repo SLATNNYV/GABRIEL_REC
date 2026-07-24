@@ -31,7 +31,8 @@ export default function GalleryPage({ params }: { params: { slug: string } }) {
           }),
           photos: data.photos.map((p: any) => ({
             id: p.id,
-            url: p.s3Key || `/mock/photo-0.jpg`,
+            url: `/api/photos/${p.id}`,
+            downloadUrl: p.s3Key || `/mock/photo-0.jpg`,
             price: p.price
           }))
         };

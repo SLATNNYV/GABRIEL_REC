@@ -22,13 +22,13 @@ export async function POST(req: NextRequest) {
             name: `Foto de Evento - ID ${item.id}`,
             images: [item.url], // watermarked thumbnail
           },
-          unit_amount: 1500, // R$ 15.00 in cents
+          unit_amount: Math.round(item.price * 100), // Dynamic price in cents
         },
         quantity: 1,
       })),
       mode: "payment",
       success_url: `${process.env.NEXT_PUBLIC_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_URL}/cart`,
+      cancel_url: `${process.env.NEXT_PUBLIC_URL}/checkout`,
       customer_email: email,
       metadata: {
         photoIds: items.map((i: any) => i.id).join(","),

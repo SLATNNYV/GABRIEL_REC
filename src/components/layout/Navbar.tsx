@@ -37,7 +37,7 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-4">
-          <Link href="/cart" className="p-2 hover:bg-white/10 rounded-full transition-colors relative">
+          <Link href="/checkout" className="p-2 hover:bg-white/10 rounded-full transition-colors relative">
             <ShoppingCart className="w-5 h-5 text-white/80" />
             <span className="absolute top-1 right-1 w-2 h-2 bg-gold-600 rounded-full"></span>
           </Link>

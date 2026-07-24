@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, Shield, Check, Trash2, MessageSquare, Send } from "lucide-react";
+import { ArrowLeft, Shield, Check, Trash2, MessageSquare, Send, CreditCard } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -13,6 +13,7 @@ export default function CheckoutPage() {
   const [discount, setDiscount] = useState(0);
   const [couponApplied, setCouponApplied] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"whatsapp" | "stripe">("whatsapp");
   
   const router = useRouter();
 
@@ -49,7 +50,7 @@ export default function CheckoutPage() {
   const discountAmount = subtotal * discount;
   const total = subtotal - discountAmount;
 
-  const handleCheckoutSubmit = (e: React.FormEvent) => {
+  const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cartItems.length === 0) return;
     if (!email || !name) {
@@ -59,14 +60,15 @@ export default function CheckoutPage() {
 
     setIsProcessing(true);
 
-    const whatsappNumber = "5544998348208";
+    if (paymentMethod === "whatsapp") {
+      const whatsappNumber = "5544998348208";
 
-    // Build the photo list formatted for WhatsApp text
-    const itemsList = cartItems.map((item, idx) => {
-      return `   - Foto ID: ${item.id} (${item.price ? `R$ ${item.price.toFixed(2)}` : "Sob consulta"})`;
-    }).join("\n");
+      // Build the photo list formatted for WhatsApp text
+      const itemsList = cartItems.map((item, idx) => {
+        return `   - Foto ID: ${item.id} (${item.price ? `R$ ${item.price.toFixed(2)}` : "Sob consulta"})`;
+      }).join("\n");
 
-    const message = `Olá Gabriel Rec! Gostaria de finalizar meu pedido de fotos.
+      const message = `Olá Gabriel Rec! Gostaria de finalizar meu pedido de fotos.
 
 *DADOS DO CLIENTE:*
 - Nome: ${name}
@@ -82,17 +84,54 @@ ${itemsList}
 
 Por favor, me envie os dados para pagamento Pix e liberação do link de download em alta resolução.`;
 
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
+      const encodedMessage = encodeURIComponent(message);
+      const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
 
-    // Store purchased items list and clear cart
-    localStorage.setItem("purchasedItems", JSON.stringify(cartItems));
-    localStorage.removeItem("cartItems");
+      // Store purchased items list and clear cart
+      localStorage.setItem("purchasedItems", JSON.stringify(cartItems));
+      localStorage.removeItem("cartItems");
 
-    setTimeout(() => {
-      setIsProcessing(false);
-      window.location.href = whatsappUrl;
-    }, 1500);
+      setTimeout(() => {
+        setIsProcessing(false);
+        // Open WhatsApp in a new tab and redirect current window to success page
+        window.open(whatsappUrl, "_blank");
+        router.push("/checkout/success?method=pix");
+      }, 1500);
+    } else {
+      // Stripe payment route
+      try {
+        const res = await fetch("/api/checkout/stripe", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            items: cartItems,
+            email: email,
+          }),
+        });
+
+        if (!res.ok) {
+          throw new Error("Erro ao criar sessão de pagamento no Stripe.");
+        }
+
+        const data = await res.json();
+        if (data.url) {
+          // Store purchased items list before redirecting
+          localStorage.setItem("purchasedItems", JSON.stringify(cartItems));
+          localStorage.removeItem("cartItems");
+          
+          setIsProcessing(false);
+          window.location.href = data.url;
+        } else {
+          throw new Error("URL de pagamento não retornada.");
+        }
+      } catch (err: any) {
+        console.error(err);
+        alert(err.message || "Erro ao processar pagamento com cartão.");
+        setIsProcessing(false);
+      }
+    }
   };
 
   return (
@@ -145,27 +184,63 @@ Por favor, me envie os dados para pagamento Pix e liberação do link de downloa
                 </div>
               </div>
 
-              {/* Payment info via WhatsApp */}
+              {/* Payment Selector and Info */}
               <div className="glass-card p-8 border-gold-500/20 bg-gradient-to-b from-zinc-950 to-black">
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
                   <span className="w-6 h-6 bg-gold-600/10 text-gold-500 rounded-full flex items-center justify-center text-xs font-black">2</span>
-                  Pagamento e Liberação
+                  Forma de Pagamento
                 </h3>
 
+                {/* Payment Methods Tabs */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("whatsapp")}
+                    className={`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all ${paymentMethod === "whatsapp" ? "border-gold-500 bg-gold-500/5 text-white" : "border-white/10 bg-white/5 text-white/50 hover:bg-white/10"}`}
+                  >
+                    <MessageSquare className="w-6 h-6 text-gold-500" />
+                    <span className="text-xs font-bold">WhatsApp (Pix)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("stripe")}
+                    className={`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all ${paymentMethod === "stripe" ? "border-gold-500 bg-gold-500/5 text-white" : "border-white/10 bg-white/5 text-white/50 hover:bg-white/10"}`}
+                  >
+                    <CreditCard className="w-6 h-6 text-cyan-500" />
+                    <span className="text-xs font-bold">Cartão de Crédito</span>
+                  </button>
+                </div>
+
                 <div className="space-y-6">
-                  <div className="flex gap-4 items-start bg-gold-600/5 border border-gold-500/20 p-5 rounded-xl">
-                    <MessageSquare className="w-6 h-6 text-gold-500 shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="text-sm font-bold text-white mb-1">Como funciona o pagamento?</h4>
-                      <p className="text-xs text-white/60 leading-relaxed">
-                        Ao clicar no botão de finalizar, seu pedido será compilado e você será redirecionado para o WhatsApp do fotógrafo *Gabriel Rec* com a mensagem pronta.
-                      </p>
-                      <ul className="text-xs text-white/50 list-disc pl-4 mt-2 space-y-1">
-                        <li>Você efetua o pagamento de forma simples via Pix direto no WhatsApp.</li>
-                        <li>Após a confirmação, o fotógrafo envia o link para download das fotos em alta resolução sem marcas d'água.</li>
-                      </ul>
+                  {paymentMethod === "whatsapp" ? (
+                    <div className="flex gap-4 items-start bg-gold-600/5 border border-gold-500/20 p-5 rounded-xl">
+                      <MessageSquare className="w-6 h-6 text-gold-500 shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="text-sm font-bold text-white mb-1">Como funciona o Pix via WhatsApp?</h4>
+                        <p className="text-xs text-white/60 leading-relaxed">
+                          Ao finalizar, abriremos o WhatsApp do fotógrafo *Gabriel Rec* com seu pedido detalhado.
+                        </p>
+                        <ul className="text-xs text-white/50 list-disc pl-4 mt-2 space-y-1">
+                          <li>Você realiza a transferência via Pix informada na conversa.</li>
+                          <li>Após a comprovação, o fotógrafo libera suas fotos na Área de Cliente.</li>
+                        </ul>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="flex gap-4 items-start bg-cyan-600/5 border border-cyan-500/20 p-5 rounded-xl">
+                      <CreditCard className="w-6 h-6 text-cyan-500 shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="text-sm font-bold text-white mb-1">Como funciona o pagamento automático?</h4>
+                        <p className="text-xs text-white/60 leading-relaxed">
+                          Você será redirecionado para a plataforma de pagamento seguro do Stripe.
+                        </p>
+                        <ul className="text-xs text-white/50 list-disc pl-4 mt-2 space-y-1">
+                          <li>Pague no cartão de crédito em ambiente criptografado e seguro.</li>
+                          <li>Suas fotos em alta resolução sem marcas d'água são **liberadas instantaneamente** para download após a aprovação!</li>
+                        </ul>
+                      </div>
+                    </div>
+                  )}
 
                   <form onSubmit={handleCheckoutSubmit}>
                     <button 
@@ -174,11 +249,16 @@ Por favor, me envie os dados para pagamento Pix e liberação do link de downloa
                       className="w-full btn-gold !py-4 text-md font-bold flex items-center justify-center gap-3 disabled:opacity-50"
                     >
                       {isProcessing ? (
-                        "Redirecionando..."
-                      ) : (
+                        "Processando..."
+                      ) : paymentMethod === "whatsapp" ? (
                         <>
                           <Send className="w-5 h-5" />
-                          Finalizar e Enviar via WhatsApp (R$ {total.toFixed(2)})
+                          Finalizar e Ir para WhatsApp (R$ {total.toFixed(2)})
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="w-5 h-5" />
+                          Pagar com Cartão (R$ {total.toFixed(2)})
                         </>
                       )}
                     </button>
