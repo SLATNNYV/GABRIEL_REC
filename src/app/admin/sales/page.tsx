@@ -1,6 +1,39 @@
-"use client";
+import { DollarSign, CreditCard, Calendar, Users, ShoppingBag } from "lucide-react";
 
-import { DollarSign, ArrowUpRight, TrendingUp, CreditCard, Calendar, Users, ShoppingBag } from "lucide-react";
+// Inline SVG icons to avoid named export resolution issues in Next.js/Webpack
+function TrendingUp(props: any) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={props.className}
+    >
+      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+      <polyline points="16 7 22 7 22 13" />
+    </svg>
+  );
+}
+
+function ArrowUpRight(props: any) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={props.className}
+    >
+      <path d="M7 7h10v10" />
+      <path d="M7 17 17 7" />
+    </svg>
+  );
+}
 
 export default function AdminSalesPage() {
   // Mock sales data
