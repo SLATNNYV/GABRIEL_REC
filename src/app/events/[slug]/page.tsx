@@ -67,6 +67,54 @@ export default function GalleryPage({ params }: { params: { slug: string } }) {
     }
   }, [eventData]);
 
+  // Protect screen from screenshots and blurs the page when window loses focus
+  useEffect(() => {
+    const handleBlur = () => {
+      document.body.classList.add("blur-screenshots");
+    };
+
+    const handleFocus = () => {
+      document.body.classList.remove("blur-screenshots");
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent common keys for inspect/devtools and screenshot
+      if (
+        e.key === "F12" ||
+        (e.ctrlKey && e.shiftKey && e.key === "I") ||
+        (e.ctrlKey && e.shiftKey && e.key === "J") ||
+        (e.ctrlKey && e.key === "u") ||
+        e.key === "PrintScreen"
+      ) {
+        e.preventDefault();
+        return false;
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "PrintScreen") {
+        try {
+          navigator.clipboard.writeText("PREVIA PROTEGIDA - GABRIEL LUIZ (REC)");
+        } catch (err) {
+          console.warn("Could not write to clipboard:", err);
+        }
+        alert("Capturas de tela são proibidas. Compre a foto para tê-la em alta resolução sem marca d'água.");
+      }
+    };
+
+    window.addEventListener("blur", handleBlur);
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("keydown", handleKeyDown, true);
+    window.addEventListener("keyup", handleKeyUp, true);
+
+    return () => {
+      window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("keydown", handleKeyDown, true);
+      window.removeEventListener("keyup", handleKeyUp, true);
+    };
+  }, []);
+
   const toggleSelection = (id: string) => {
     setSelectedPhotos(prev => {
       const updated = prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id];
@@ -196,9 +244,11 @@ function PhotoThumb({ photo, isSelected, onToggle }: { photo: any; isSelected: b
 
       {/* Overlay de Marca d'Água Dinâmica (Visual) */}
       <div className="absolute inset-0 z-10 pointer-events-none unselectable flex items-center justify-center">
-         <div className="rotate-[-30deg] opacity-[0.08] text-white space-y-4">
-           {Array.from({ length: 4 }).map((_, i) => (
-             <p key={i} className="text-lg font-black whitespace-nowrap">VISIONARY • PREVIEW PROTEGIDA • VISIONARY</p>
+         <div className="rotate-[-30deg] opacity-[0.25] text-white text-center space-y-2 select-none" style={{ textShadow: "1px 1px 2px rgba(0,0,0,0.8)" }}>
+           {Array.from({ length: 5 }).map((_, i) => (
+             <p key={i} className="text-xs font-black whitespace-nowrap tracking-wider">
+               GABRIEL LUIZ (REC) • PREVIA PROTEGIDA • PROIBIDO PRINT
+             </p>
            ))}
          </div>
       </div>

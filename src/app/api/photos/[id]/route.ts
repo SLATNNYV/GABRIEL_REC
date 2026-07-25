@@ -63,7 +63,18 @@ export async function GET(
       return NextResponse.json({ error: "Foto não encontrada" }, { status: 404 });
     }
 
-    const clientName = "Visitante";
+    // Try to get user's name from session cookies
+    const userId = req.cookies.get("user_id")?.value;
+    let clientName = "VISITANTE";
+    if (userId) {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true }
+      });
+      if (user?.name) {
+        clientName = user.name.toUpperCase();
+      }
+    }
 
     // 1. Get original from S3 / local path
     const originalBuffer = await fetchFromS3(photo.s3Key);

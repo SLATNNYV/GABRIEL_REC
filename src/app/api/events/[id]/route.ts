@@ -28,6 +28,21 @@ export async function GET(
       return NextResponse.json({ error: "Evento não encontrado" }, { status: 404 });
     }
 
+    // Protect the original photo URLs (s3Key) against client-side sniffing/scraping
+    // Unless the logged-in user is an administrator
+    const userRole = req.cookies.get("user_role")?.value;
+    const isAdmin = userRole === "ADMIN";
+
+    if (!isAdmin && event.photos && event.photos.length > 0) {
+      event = {
+        ...event,
+        photos: event.photos.map((p) => ({
+          ...p,
+          s3Key: "", // Masking the high-resolution source URL for security
+        })),
+      };
+    }
+
     return NextResponse.json(event);
   } catch (error) {
     console.error("Erro ao buscar evento:", error);

@@ -170,7 +170,7 @@ function CheckoutSuccessContent() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
               {purchasedPhotos.map((photo) => (
                 <div key={photo.id} className="relative aspect-square rounded-xl overflow-hidden border border-white/5 group">
-                  <img src={photo.url} alt="Foto adquirida" className="w-full h-full object-cover" />
+                  <img src={photo.downloadUrl || photo.url} alt="Foto adquirida" className="w-full h-full object-cover" />
                   
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
                     <button 
