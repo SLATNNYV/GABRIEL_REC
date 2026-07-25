@@ -41,10 +41,10 @@ export function Footer() {
           <div>
             <h4 className="text-white font-semibold mb-6">Categorias</h4>
             <ul className="space-y-4 text-sm text-white/50">
-              <li><Link href="/category/casamentos" className="hover:text-gold-500 transition-colors">Casamentos</Link></li>
-              <li><Link href="/category/formaturas" className="hover:text-gold-500 transition-colors">Formaturas</Link></li>
-              <li><Link href="/category/corporativo" className="hover:text-gold-500 transition-colors">Eventos Corporativos</Link></li>
-              <li><Link href="/category/ensaios" className="hover:text-gold-500 transition-colors">Ensaios</Link></li>
+              <li><Link href="/events?category=casamentos" className="hover:text-gold-500 transition-colors">Casamentos</Link></li>
+              <li><Link href="/events?category=formaturas" className="hover:text-gold-500 transition-colors">Formaturas</Link></li>
+              <li><Link href="/events?category=corporativo" className="hover:text-gold-500 transition-colors">Eventos Corporativos</Link></li>
+              <li><Link href="/events?category=ensaios" className="hover:text-gold-500 transition-colors">Ensaios</Link></li>
             </ul>
           </div>
 

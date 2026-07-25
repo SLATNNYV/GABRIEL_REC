@@ -4,8 +4,35 @@ import { Search, Filter, Calendar as CalendarIcon, Camera, ArrowRight } from "lu
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 
-export default async function EventsPage() {
+export default async function EventsPage({
+  searchParams,
+}: {
+  searchParams: { category?: string };
+}) {
+  const categoryFilter = searchParams.category;
+
+  const whereClause: any = {};
+  if (categoryFilter) {
+    let categoryDbName = categoryFilter;
+    const lowerCategory = categoryFilter.toLowerCase();
+    if (lowerCategory.startsWith("casamento")) {
+      categoryDbName = "Casamento";
+    } else if (lowerCategory.startsWith("formatura")) {
+      categoryDbName = "Formatura";
+    } else if (lowerCategory.startsWith("corporativo")) {
+      categoryDbName = "Corporativo";
+    } else if (lowerCategory.startsWith("ensaio")) {
+      categoryDbName = "Ensaio";
+    }
+
+    whereClause.category = {
+      equals: categoryDbName,
+      mode: "insensitive"
+    };
+  }
+
   const events = await prisma.event.findMany({
+    where: whereClause,
     include: {
       _count: {
         select: { photos: true }
@@ -16,12 +43,23 @@ export default async function EventsPage() {
     }
   });
 
+  // Helper for title display
+  const getCategoryTitle = () => {
+    if (!categoryFilter) return "";
+    const lower = categoryFilter.toLowerCase();
+    if (lower.startsWith("casamento")) return " - Casamentos";
+    if (lower.startsWith("formatura")) return " - Formaturas";
+    if (lower.startsWith("corporativo")) return " - Eventos Corporativos";
+    if (lower.startsWith("ensaio")) return " - Ensaios";
+    return ` - ${categoryFilter}`;
+  };
+
   return (
     <div className="pt-32 pb-20">
       <div className="container mx-auto px-6">
         <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-12">
           <div>
-            <h1 className="text-4xl font-bold mb-4">Galeria de Eventos</h1>
+            <h1 className="text-4xl font-bold mb-4">Galeria de Eventos{getCategoryTitle()}</h1>
             <p className="text-white/40">Selecione seu evento para visualizar e adquirir suas fotos.</p>
           </div>
           
