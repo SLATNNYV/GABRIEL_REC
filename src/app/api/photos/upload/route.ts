@@ -15,14 +15,6 @@ export async function POST(req: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Setup public/uploads directory path
-    const uploadDir = path.join(process.cwd(), "public", "uploads");
-
-    // Create the directory if it does not exist
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
     // Clean and normalize the filename
     const cleanFilename = file.name
       .toLowerCase()
@@ -34,16 +26,35 @@ export async function POST(req: NextRequest) {
 
     // Create a unique filename
     const uniqueFilename = `${Date.now()}-${cleanFilename}`;
-    const filePath = path.join(uploadDir, uniqueFilename);
 
-    // Save the file to the local directory
-    fs.writeFileSync(filePath, buffer);
+    try {
+      // Setup public/uploads directory path
+      const uploadDir = path.join(process.cwd(), "public", "uploads");
 
-    // Return the absolute public URL of the uploaded image
-    const fileUrl = `/uploads/${uniqueFilename}`;
-    console.log(`Upload completo: ${fileUrl}`);
+      // Create the directory if it does not exist
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
 
-    return NextResponse.json({ url: fileUrl }, { status: 201 });
+      const filePath = path.join(uploadDir, uniqueFilename);
+
+      // Save the file to the local directory
+      fs.writeFileSync(filePath, buffer);
+
+      // Return the absolute public URL of the uploaded image
+      const fileUrl = `/uploads/${uniqueFilename}`;
+      console.log(`Upload completo local: ${fileUrl}`);
+      return NextResponse.json({ url: fileUrl }, { status: 201 });
+    } catch (fsError) {
+      console.warn("Ambiente de produção somente leitura (Vercel). Salvando como base64 no banco:", fsError);
+      
+      // Fallback: Convert file buffer to base64 data URL
+      const base64String = buffer.toString("base64");
+      const mimeType = file.type || "image/jpeg";
+      const fileUrl = `data:${mimeType};base64,${base64String}`;
+      
+      return NextResponse.json({ url: fileUrl }, { status: 201 });
+    }
   } catch (error: any) {
     console.error("Erro ao realizar o upload do arquivo:", error);
     return NextResponse.json({ error: "Falha interna no upload do arquivo." }, { status: 500 });

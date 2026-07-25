@@ -6,6 +6,13 @@ import path from "path";
 
 // robust implementation to fetch files locally or from remote URLs
 async function fetchFromS3(key: string): Promise<Buffer> {
+  // If it's a base64 data URL, decode it directly
+  if (key.startsWith("data:")) {
+    console.log("Processando imagem em formato base64");
+    const base64Data = key.split(",")[1];
+    return Buffer.from(base64Data, "base64");
+  }
+
   // If it's a full remote URL (e.g. S3/R2 public URL), fetch it via http
   if (key.startsWith("http://") || key.startsWith("https://")) {
     console.log(`Buscando arquivo remoto: ${key}`);
