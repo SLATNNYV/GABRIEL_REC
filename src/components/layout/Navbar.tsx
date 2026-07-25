@@ -1,17 +1,40 @@
 "use client";
 
 import Link from "next/link";
-import { Camera, User, ShoppingCart, Menu } from "lucide-react";
+import { Camera, User, ShoppingCart, Menu, LogOut } from "lucide-react";
 import { useState, useEffect } from "react";
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
+    
+    // Check initial user state from localStorage
+    const stored = localStorage.getItem("user");
+    if (stored) {
+      try {
+        setUser(JSON.parse(stored));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch (e) {
+      console.error("Erro ao deslogar:", e);
+    }
+    localStorage.removeItem("user");
+    setUser(null);
+    window.location.href = "/";
+  };
 
   return (
     <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? "bg-black/80 backdrop-blur-md py-3 border-b border-white/10" : "bg-transparent py-5"}`}>
@@ -41,10 +64,31 @@ export function Navbar() {
             <ShoppingCart className="w-5 h-5 text-white/80" />
             <span className="absolute top-1 right-1 w-2 h-2 bg-gold-600 rounded-full"></span>
           </Link>
-          <Link href="/auth/login" className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full hover:bg-white/10 transition-colors">
-            <User className="w-4 h-4 text-gold-500" />
-            <span className="text-sm font-medium text-white">Entrar</span>
-          </Link>
+
+          {user ? (
+            <div className="flex items-center gap-3">
+              <Link 
+                href={user.role === "ADMIN" ? "/admin" : "/client/dashboard"} 
+                className="flex items-center gap-2 bg-gold-600/10 border border-gold-500/20 px-4 py-2 rounded-full hover:bg-gold-600/20 transition-all text-xs font-bold text-gold-400"
+              >
+                <User className="w-3.5 h-3.5 text-gold-400" />
+                <span className="max-w-[80px] truncate">{user.name.split(" ")[0]}</span>
+              </Link>
+              <button 
+                onClick={handleLogout} 
+                className="p-2 hover:bg-red-500/10 text-white/50 hover:text-red-400 rounded-full transition-colors"
+                title="Sair"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <Link href="/auth/login" className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full hover:bg-white/10 transition-colors">
+              <User className="w-4 h-4 text-gold-500" />
+              <span className="text-sm font-medium text-white">Entrar</span>
+            </Link>
+          )}
+
           <button className="md:hidden p-2">
             <Menu className="w-6 h-6 text-white" />
           </button>

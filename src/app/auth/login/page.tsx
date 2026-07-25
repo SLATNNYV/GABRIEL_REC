@@ -34,6 +34,9 @@ export default function LoginPage() {
         throw new Error(data.error || "E-mail ou senha incorretos.");
       }
 
+      // Save user to localStorage for client-side state
+      localStorage.setItem("user", JSON.stringify(data.user));
+
       // Successful login redirect based on role
       if (data.user.role === "ADMIN") {
         router.push("/admin");
@@ -74,6 +77,9 @@ export default function LoginPage() {
       if (!res.ok) {
         throw new Error(data.error || "Erro ao logar como cliente de teste.");
       }
+
+      // Save user to localStorage
+      localStorage.setItem("user", JSON.stringify(data.user));
 
       router.push("/client/dashboard");
     } catch (err: any) {
