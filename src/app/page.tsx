@@ -57,7 +57,7 @@ export default function Home() {
       <section className="py-24 bg-black">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-bold mb-4">Nossa Especialidade</h2>
+            <h2 className="text-3xl md:text-5xl font-bold mb-4 text-white">Nossa Especialidade</h2>
             <p className="text-white/40 max-w-xl mx-auto">Oferecemos uma experiência completa, desde o clique inicial até a entrega digital segura das suas memórias.</p>
           </div>
 
@@ -86,7 +86,7 @@ export default function Home() {
         <div className="container mx-auto px-6">
           <div className="glass-card p-12 text-center overflow-hidden relative">
             <div className="relative z-10">
-              <h2 className="text-4xl font-bold mb-6">Pronto para encontrar suas fotos?</h2>
+              <h2 className="text-4xl font-bold mb-6 text-white">Pronto para encontrar suas fotos?</h2>
               <p className="text-white/60 mb-10 max-w-2xl mx-auto">Acesse seu evento agora mesmo, selecione suas favoritas e receba as versões originais sem marcas d'água instantaneamente após o pagamento.</p>
               <Link href="/events" className="btn-gold inline-flex items-center gap-3">
                 Explorar Galeria de Eventos <ArrowRight className="w-5 h-5" />
@@ -108,7 +108,7 @@ function ServiceCard({ icon, title, description }: { icon: React.ReactNode; titl
       <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center mb-6 border border-white/10 group-hover:bg-gold-600/10 transition-colors">
         {icon}
       </div>
-      <h3 className="text-xl font-bold mb-4">{title}</h3>
+      <h3 className="text-xl font-bold mb-4 text-white group-hover:text-gold-500 transition-colors">{title}</h3>
       <p className="text-white/40 text-sm leading-relaxed">{description}</p>
     </div>
   );

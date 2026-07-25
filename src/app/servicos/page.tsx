@@ -127,7 +127,7 @@ function ServiceBlock({ icon, title, tagline, features, highlight = false }: any
           )}
         </div>
         
-        <h3 className="text-2xl font-bold mb-1">{title}</h3>
+        <h3 className="text-2xl font-bold mb-1 text-white">{title}</h3>
         <p className="text-xs text-white/40 mb-6">{tagline}</p>
         
         <ul className="space-y-3.5 text-xs text-white/70">
@@ -159,7 +159,7 @@ function StepItem({ number, title, description }: any) {
       <span className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full bg-gold-600 text-black flex items-center justify-center text-lg font-black border-4 border-black shadow-lg">
         {number}
       </span>
-      <h4 className="text-lg font-bold mt-4 mb-3">{title}</h4>
+      <h4 className="text-lg font-bold mt-4 mb-3 text-white">{title}</h4>
       <p className="text-white/40 text-xs leading-relaxed">{description}</p>
     </div>
   );

@@ -10,7 +10,6 @@ module.exports = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
-        black: "#090c15", // Softer dark navy instead of pure black
         gold: {
           50: "#fffbeb",
           100: "#fef3c7",
@@ -25,8 +24,8 @@ module.exports = {
           950: "#451a03",
         },
         navy: {
-          900: "#13182b", // Softer navy
-          950: "#090c15", // Softer dark navy matching black
+          900: "#020617",
+          950: "#000000",
         }
       },
       backgroundImage: {
