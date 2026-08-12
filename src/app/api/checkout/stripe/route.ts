@@ -67,8 +67,8 @@ export async function POST(req: NextRequest) {
         };
       }),
       mode: "payment",
-      success_url: `${process.env.NEXT_PUBLIC_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_URL}/checkout`,
+      success_url: `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/checkout`,
       customer_email: email,
       metadata: {
         photoIds: items.map((i: any) => i.id).join(","),
