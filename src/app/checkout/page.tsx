@@ -69,11 +69,11 @@ export default function CheckoutPage() {
         }),
       });
 
+      const data = await res.json();
       if (!res.ok) {
-        throw new Error("Erro ao criar sessão de pagamento no Stripe.");
+        throw new Error(data.error || "Erro ao criar sessão de pagamento no Stripe.");
       }
 
-      const data = await res.json();
       if (data.url) {
         setIsProcessing(false);
         // Redirect client to Stripe Checkout (handles Pix + Credit Card securely)
